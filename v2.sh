@@ -21,7 +21,7 @@ if [ "$CURRENT_STATE" != "$OLD_STATE" ]; then
 
     echo "$CURRENT_STATE" > "$STATE_FILE"
 
-    # Wysyłanie mail
+    # Wysyłanie mail .. 
 else
     echo "Brak zmian"
 fi
