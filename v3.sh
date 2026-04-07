@@ -3,6 +3,7 @@
 EMAIL="przeszlowskil@gmail.com"
 
 MAIL_CMD=$(command -v mail || command -v mailx)
+MSMTP_CMD=$(command -v msmtp)
 
 # 🔹 Sprawdzamy, czy istnieje mail/mailx
 if [ -z "$MAIL_CMD" ]; then
