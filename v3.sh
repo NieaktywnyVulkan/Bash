@@ -1,11 +1,13 @@
 #!/bin/bash
+# Skrypt monitoruje stan systemu (IP, RAM, CPU) i wysyła maila, gdy wykryje zmianę.
+EMAIL="YOUR_EMAIL@gmail.com"
 
-EMAIL="przeszlowskil@gmail.com"
-
+# Szukamy dostępnego programu do wysyłania maili
 MAIL_CMD=$(command -v mail || command -v mailx)
 MSMTP_CMD=$(command -v msmtp)
 
-# 🔹 Sprawdzamy, czy istnieje mail/mailx
+# Sprawdzamy, czy istnieje mail/mailx
+# Pozwala wysyłać e-maile z poziomu terminala
 if [ -z "$MAIL_CMD" ]; then
     echo "Brak programu mail/mailx"
     echo "Zainstaluj mailutils lub mailx"
@@ -14,7 +16,10 @@ if [ -z "$MAIL_CMD" ]; then
     exit 1
 fi
 
-# 🔹 Sprawdzamy, czy jest msmtp
+# Sprawdzamy, czy jest msmtp
+# msmtp - odpowiada za połączenie z serwerem pocztowym (SMTP)
+# msmtp-mta - pozwala używać msmtp jako domyślnego programu do wysyłania maili (alternatywa dla sendmail)
+# msmtp jest lekki i łatwy w konfiguracji
 if [ -z "$MSMTP_CMD" ]; then
     echo "Brak programu msmtp (SMTP)"
     echo "Ubuntu: sudo apt install msmtp msmtp-mta"
@@ -22,14 +27,16 @@ if [ -z "$MSMTP_CMD" ]; then
     exit 1
 fi
 
-# 🔹 Sprawdzamy, czy istnieje plik konfiguracyjny
+# Sprawdzamy, czy istnieje plik konfiguracyjny
+# Zawiera dane do logowania do serwera SMTP (np. Gmail)
 if [ ! -f "$HOME/.msmtprc" ]; then
     echo "Brak pliku konfiguracyjnego ~/.msmtprc"
     echo "Skopiuj szablon z repozytorium i wprowadź swoje hasło aplikacji"
     exit 1
 fi
 
-# 🔹 Sprawdzamy uprawnienia pliku
+# Sprawdzamy uprawnienia pliku
+# Plik konfiguracyjny z hasłem musi mieć uprawnienia 600 (tylko właściciel może czytać i pisać)
 PERM=$(stat -c "%a" "$HOME/.msmtprc")
 if [ "$PERM" != "600" ]; then
     echo "Plik ~/.msmtprc musi mieć uprawnienia 600"
@@ -37,7 +44,7 @@ if [ "$PERM" != "600" ]; then
     exit 1
 fi
 
-
+# Funkcja do wysyłania maili
 send_mail() {
     SUBJECT="$1"
     MESSAGE="$2"
@@ -45,10 +52,14 @@ send_mail() {
     printf "%s\n" "$MESSAGE" | $MAIL_CMD -s "$SUBJECT" "$EMAIL"
 }
 
+# Pobieramy aktualny stan systemu
+# Pierwszy adres IP, używana pamięć RAM w MB, liczba rdzeni CPU
 IP=$(hostname -I | awk '{print $1}')
 RAM=$(free -m | awk '/Mem:/ {print $3}')
 CPU=$(grep -c ^processor /proc/cpuinfo)
 
+# Plik przechowujący poprzedni stan systemu
+# Dzięki temu możemy wykryć zmiany między uruchomieniami skryptu
 STATE_FILE="state.txt"
 CURRENT_STATE="$IP|$RAM|$CPU"
 
@@ -58,6 +69,7 @@ IP: $IP
 RAM: $RAM MB
 CPU: $CPU"
 
+# Sprawdzamy, czy istnieje plik stanu. Jeśli nie, to jest to pierwsze uruchomienie skryptu.
 if [ ! -f "$STATE_FILE" ]; then
     echo "Pierwsze uruchomienie"
 
@@ -70,6 +82,7 @@ fi
 
 OLD_STATE=$(cat "$STATE_FILE")
 
+# Porównujemy aktualny stan z poprzednim. Jeśli są różne, to wysyłamy maila i aktualizujemy plik stanu.
 if [ "$CURRENT_STATE" != "$OLD_STATE" ]; then
     echo "Zmiana wykryta"
 
